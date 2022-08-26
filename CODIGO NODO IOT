@@ -1,0 +1,145 @@
+/*
+* ------ [SX_02a] - TX LoRa para el nodo IoT 4ANI-SEM50 --------
+*
+* Explicación: este archivo muestra cómo configurar el nodo IoT
+* módulo en modo LoRa y luego enviar paquetes con cargas útiles de texto sin formato
+*
+* Copyright (C) 2022 Cintelam Campos Inteligentes de América Cía. Ltda.
+*http://www.cintelam.com
+*  
+* Este programa es software libre: puedes redistribuirlo y/o modificar
+* bajo los términos de la Licencia Pública General GNU publicada por
+* la Free Software Foundation, ya sea la versión 3 de la Licencia, o
+* (a su elección) cualquier versión posterior.
+*  
+* Este programa se distribuye con la esperanza de que sea útil,
+* pero SIN NINGUNA GARANTÍA; sin siquiera la garantía implícita de
+* COMERCIABILIDAD o IDONEIDAD PARA UN FIN DETERMINADO. Ver el
+* Licencia Pública General GNU para más detalles.
+*  
+* Versión: 4.1
+* Autor 1: Ángel Guevara Chinchero
+* Autor 2: Héctor Chinchero Villacís
+* Autor 3: Alfonso Marchán
+*/
+
+
+// Incluir esta biblioteca para transmitir con sx1272
+#include <AvispaSX1272.h>
+#include <bucle actual.h>
+#incluir <cadena.h>
+#incluir <stdio.h>
+
+// definir la dirección de destino para enviar paquetes
+uint8_t rx_address = 1;
+fuente int=2;
+
+// variable de estado
+int8_t e;
+
+valor flotante Irms = 0;
+valor flotanteVin = 0;
+valor flotantePot = 0;
+
+configuración vacía ()
+{
+  // Inicializar puerto USB
+  USB.ON();
+  USB.println(F("SX_02a ejemplo"));
+  USB.println(F("Semtech SX1272 módulo TX en LoRa"));
+
+  USB.println(F("----------------------------------------")) ;
+  USB.println(F("Configuración de ajustes:"));
+  USB.println(F("----------------------------------------")) ;
+
+  // Inicialización del módulo sx1272
+  sx1272.ON();
+
+  //Seleccionar canal de frecuencia CH_14_868 antes estuvo CH_10_868
+  e = sx1272.setChannel(CH_14_868);
+  USB.print(F("Configuración del canal CH_14_868.\t state "));
+  USB.println(e);
+
+  // Seleccione el modo de encabezado implícito (desactivado) o explícito (activado)
+  e = sx1272.setHeaderON();
+  USB.print(F("Configuración de encabezado ON.\t\t state "));  
+  USB.println(e);
+
+  // Seleccionar modo: de 1 a 10
+  e = sx1272.setMode(7);  
+  USB.print(F("Modo de configuración '1'.\t\t state "));
+  USB.println(e);  
+
+  // Seleccionar CRC activado o desactivado
+  e = sx1272.setCRC_ON();
+  USB.print(F("Configurando CRC ON.\t\t\t state "));
+  USB.println(e);  
+
+  // Seleccione la potencia de salida (Max, High o Low)
+  e = sx1272.setPower('M');
+  USB.print(F("Estableciendo el poder en 'L'.\t\t state "));  
+  USB.println(e);
+
+  // Seleccione el valor de la dirección del nodo: de 2 a 255
+  e = sx1272.setNodeAddress(src);
+  USB.print(F("Estableciendo la dirección del nodo en '2'.\t state "));
+  USB.println(e);
+  USB.println();
+
+
+  currentLoopBoard.ON(SUMINISTRO5V);
+  
+  
+  retraso (1000);  
+  
+  USB.println(F("----------------------------------------")) ;
+  USB.println(F("Enviando:"));
+  USB.println(F("----------------------------------------")) ;
+}
+
+
+bucle vacío ()
+{
+  //ejemplo de lectura analogica de sensores con ADC acondicionado
+  valueIrms = currentLoopBoard.readChannel(CHANNEL1);
+  //se puede reemplazar por GetCorriente(CHANNEL1);
+  valor Vin = 120 V;
+  //se puede reemplazar por SetTension();
+  valorPot = valorVin*valorIrms;
+  //se puede reemplazar por GetPotencia();
+      
+  //variable que almacena todos los valores calculados y enviados a la red Lora
+  char mensajeVariables[100];
+  
+  //valores en arreglo de caracteres
+  char charIrms[15];
+  char charVin[15];
+  char CharPot[15];
+
+  Utils.float2String (valueIrms, charIrms, 2);
+  Utils.float2String (valueVin, charVin, 2);
+  Utils.float2String (valorPot, charPot, 2);
+
+  //construccion del string de la lectura del sensor y transmision de datos
+  snprintf(mensajeVariables, sizeof(mensajeVariables), "<src=%d;Irms=%s;Vin=%s;Pot=%s>", src, charIrms, charVin, charPot);
+  //imprime en puerto local los valores para verificar la programación - desarrolladores
+  USB.println(mensajeVariables);
+
+  //verifica el envio del mensaje a la red LoRa
+  e = sx1272.sendPacketTimeout( rx_address, (char *)mensajeVariables);
+  
+  retraso (1000);
+  // Comprobar el estado del envío
+  si ( e == 0 )
+  {
+    USB.println(F("Paquete enviado correctamente"));     
+  }
+  más
+  {
+    USB.println(F("Error al enviar el paquete"));  
+    USB.print(F("estado: "));
+    USB.println(e, DEC);
+  }
+
+  retraso (5000);
+}
